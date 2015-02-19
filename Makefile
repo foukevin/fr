@@ -33,6 +33,7 @@ ifeq ($(config),release)
 endif
 
 OBJECTS := \
+	$(OBJDIR)/error.o \
 	$(OBJDIR)/bitmap.o \
 	$(OBJDIR)/options.o \
 	$(OBJDIR)/fr.o \
@@ -55,11 +56,13 @@ clean:
 	rm -f  $(TARGET)
 	rm -rf $(OBJDIR)
 
-$(OBJDIR)/bitmap.o: bitmap.c bitmap.h
+$(OBJDIR)/error.o: error.c error.h
 	 $(CC) $(CFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/options.o: options.c fr.h
+$(OBJDIR)/bitmap.o: bitmap.c bitmap.h error.h
 	 $(CC) $(CFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/fr.o: fr.c fr.h bitmap.h
+$(OBJDIR)/options.o: options.c fr.h error.h
 	 $(CC) $(CFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/main.o: main.c fr.h
+$(OBJDIR)/fr.o: fr.c fr.h bitmap.h raster_font.h error.h
+	 $(CC) $(CFLAGS) -o "$@" -c "$<"
+$(OBJDIR)/main.o: main.c fr.h error.h
 	 $(CC) $(CFLAGS) -o "$@" -c "$<"

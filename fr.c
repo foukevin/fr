@@ -1,6 +1,7 @@
 #include "fr.h"
 #include "bitmap.h"
 #include "raster_font.h"
+#include "error.h"
 
 #include <png.h>
 #include <ft2build.h>
@@ -83,7 +84,7 @@ int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
 
 	fp = (format == MF_BINARY) ? fopen(path, "wb") : fopen(path, "w");
 	if (!fp) {
-		printf("error opening %s.\n", path);
+		error("opening %s", path);
 		return 1;
 	}
 
@@ -185,7 +186,7 @@ float space_advance(FT_Face face)
 
 	glyph_index = FT_Get_Char_Index(face, ' ');
 	if (FT_Load_Glyph(face, glyph_index, load_flags)) {
-		printf("warning: not able to retrieve horizontal space advance");
+		warning("unaible to retrieve horizontal space advance");
 		advance = 0.0f;
 	} else {
 		slot = face->glyph;
@@ -215,14 +216,12 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 
 		if (FT_Load_Glyph(face, glyph_index, load_flags)
 		    || FT_Render_Glyph(face->glyph, render_mode)) {
-			printf("warning: skipping rune U+%04X "
-			       "(unable to load/render glyph)\n", i);
+			warning("skipping rune U+%04X (unable to load/render glyph)", i);
 			continue;
 		}
 
 		if (!glyph_index) {
-			printf("warning: skipping rune U+%04X "
-			       "(glyph unavailable)\n", i);
+			warning("skipping rune U+%04X (glyph unavailable)", i);
 			continue;
 		}
 
@@ -230,8 +229,7 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 		int width = face->glyph->bitmap.width;
 		int height = face->glyph->bitmap.rows;
 		if (!width || !height) {
-			printf("warning: skipping rune U+%04X "
-			       "(zero width/height)\n", i);
+			warning("skipping rune U+%04X (zero width/height)", i);
 			continue;
 		}
 

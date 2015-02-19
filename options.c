@@ -1,12 +1,26 @@
 #include "fr.h"
+#include "error.h"
 
 #include <getopt.h>
 #include <stddef.h> /* NULL */
 #include <stdlib.h> /* exit */
+#include <string.h>
 
 static struct options opt;
 static const char *arg0 = "fr";
 static const char *version = "0.1";
+
+static char *strdup(const char *s)
+{
+	char *d;
+	int len = strlen(s);
+	d = malloc(len + 1);
+	if (!d)
+		die("out of memory");
+
+	strncpy(d, s, len);
+	return d;
+}
 
 static void usage(void)
 {
@@ -101,7 +115,7 @@ static int get_ranges(const char *s)
 			range->next = opt.ranges;
 			opt.ranges = range;
 		} else {
-			printf("warning: invalid range %s\n", tok);
+			warning("invalid range %s\n", tok);
 			err = 1;
 			break;
 		}
@@ -139,21 +153,21 @@ struct options *parse_options(int argc, char **argv)
 		case 'W':
 			opt.atlas_width = atoi(optarg);
 			if (opt.atlas_width <= 0) {
-				printf("error: invalid atlas width: %s\n", optarg);
+				error("invalid atlas width: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
 		case 'H':
 			opt.atlas_height = atoi(optarg);
 			if (opt.atlas_height <= 0) {
-				printf("error: invalid atlas height: %s\n", optarg);
+				error("invalid atlas height: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
 		case 's':
 			opt.pixel_height = atoi(optarg);
 			if (opt.pixel_height <= 0) {
-				printf("error: invalid size: %s\n", optarg);
+				error("invalid size: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
@@ -162,13 +176,13 @@ struct options *parse_options(int argc, char **argv)
 			break;
 		case 'f':
 			if (get_format(optarg)) {
-				printf("error: invalid metrics format: %s\n", optarg);
+				error("invalid metrics format: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
 		case '?':
 		default:
-			printf("error: invalid option: %c\n", optopt);
+			error("invalid option: %c", optopt);
 			break;
 		}
 
@@ -186,7 +200,7 @@ struct options *parse_options(int argc, char **argv)
 	}
 
 	if (!opt.font_filename) {
-		printf("no input font file\n");
+		error("no input font file");
 		return NULL;
 	}
 
