@@ -182,7 +182,7 @@ struct options *parse_options(int argc, char **argv)
 			break;
 		case '?':
 		default:
-			error("invalid option: %c", optopt);
+			error("invalid option: '%c'", optopt);
 			break;
 		}
 
