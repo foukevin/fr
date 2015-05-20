@@ -16,15 +16,8 @@ endif
 export platform
 
 INCLUDES += -I.
-LIBS += -lfreetype -lpng
-
-ifeq ($(platform),Linux)
-  INCLUDES += -I/usr/include/freetype2
-endif
-
-ifeq ($(platform),Darwin)
-  INCLUDES += -I/usr/local/Cellar/freetype/2.5.5/include/freetype2
-endif
+CFLAGS = -Wall -Wextra `freetype-config --cflags` `libpng-config --cflags`
+LIBS += `freetype-config --libs` `libpng-config --libs`
 
 ifeq ($(config),debug)
   OBJDIR = obj/debug
