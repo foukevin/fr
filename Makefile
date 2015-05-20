@@ -10,14 +10,28 @@ ifndef AR
   AR = ar
 endif
 
+ifndef platform
+  platform = $(shell uname -s)
+endif
+export platform
+
+INCLUDES += -I.
+LIBS += -lfreetype -lpng
+
+ifeq ($(platform),Linux)
+  INCLUDES += -I/usr/include/freetype2
+endif
+
+ifeq ($(platform),Darwin)
+  INCLUDES += -I/usr/local/Cellar/freetype/2.5.5/include/freetype2
+endif
+
 ifeq ($(config),debug)
   OBJDIR = obj/debug
   TARGETDIR = bin
   TARGET = $(TARGETDIR)/fr-debug
-  INCLUDES += -I. -I/usr/include/freetype2
   CFLAGS += -std=c99 -g -Wall -Wextra -msse $(DEFINES) $(INCLUDES)
   LDFLAGS +=
-  LIBS += -lfreetype -lpng
   LINKCMD = $(CC) -o $(TARGET) $(OBJECTS) $(LDFLAGS) $(LIBS)
 endif
 
@@ -25,10 +39,8 @@ ifeq ($(config),release)
   OBJDIR = obj/release
   TARGETDIR = bin
   TARGET = $(TARGETDIR)/fr
-  INCLUDES += -I. -I/usr/include/freetype2
   CFLAGS += -std=c99 -O3 -Wall -Wextra -msse $(DEFINES) $(INCLUDES)
   LDFLAGS +=
-  LIBS += -lfreetype -lpng
   LINKCMD = $(CC) -o $(TARGET) $(OBJECTS) $(LDFLAGS) $(LIBS)
 endif
 

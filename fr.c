@@ -19,7 +19,7 @@ struct glyph_metrics {
 struct raster_glyph {
 	struct raster_glyph *next;
 
-	rune_t rune;
+	uint32_t rune;
 	struct bitmap bitmap;
 	struct glyph_metrics metrics;
 };
@@ -99,11 +99,11 @@ int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
 		def.glyph_count = num_glyphs;
 		def.space_advance = space_advance;
 		def.lut_offset = sizeof(struct metrics_hdr);
-		def.glyph_offset = def.lut_offset + sizeof(rune_t) * num_glyphs;
+		def.glyph_offset = def.lut_offset + sizeof(uint32_t) * num_glyphs;
 		fwrite(&def, sizeof(struct metrics_hdr), 1, fp);
 
 		for (glyph = glyph_list; glyph; glyph = glyph->next)
-			fwrite(&glyph->rune, sizeof(rune_t), 1, fp);
+			fwrite(&glyph->rune, sizeof(uint32_t), 1, fp);
 		for (glyph = glyph_list; glyph; glyph = glyph->next)
 			write_binary_glyph(fp, &glyph->metrics);
 		break;
@@ -202,7 +202,7 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 	FT_UInt glyph_index;
 	FT_Render_Mode render_mode = FT_RENDER_MODE_NORMAL;
 	FT_GlyphSlot slot;
-	rune_t i;
+	uint32_t i;
 
 	/*
 	 * Because the raster_glyph list is single-linked, every insertion

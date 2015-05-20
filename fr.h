@@ -4,11 +4,9 @@
 #include "bitmap.h"
 #include <stdint.h>
 
-typedef uint32_t rune_t;
-
 typedef struct rune_range {
-	rune_t lo;
-	rune_t hi;
+	uint32_t lo;
+	uint32_t hi;
 	struct rune_range *next;
 } range_t;
 

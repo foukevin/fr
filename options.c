@@ -10,7 +10,7 @@ static struct options opt;
 static const char *arg0 = "fr";
 static const char *version = "0.1";
 
-static char *strdup(const char *s)
+static char *stringdup(const char *s)
 {
 	char *d;
 	int len = strlen(s);
@@ -104,7 +104,7 @@ static int get_ranges(const char *s)
 	const char *delim = ",";
 
 	/* strtok modifies the string so duplicate it first */
-	char *copy = strdup(s);
+	char *copy = stringdup(s);
 	const char *tok = strtok(copy, delim);
 
 	while (tok) {
@@ -145,10 +145,10 @@ struct options *parse_options(int argc, char **argv)
 			opt.verbose = 1;
 			break;
 		case 'o':
-			opt.atlas_filename = strdup(optarg);
+			opt.atlas_filename = stringdup(optarg);
 			break;
 		case 'm':
-			opt.metrics_filename = strdup(optarg);
+			opt.metrics_filename = stringdup(optarg);
 			break;
 		case 'W':
 			opt.atlas_width = atoi(optarg);
@@ -196,7 +196,7 @@ struct options *parse_options(int argc, char **argv)
 		 * Take the first positional argument, pending ones
 		 * are just ignored.
 		 */
-		opt.font_filename = strdup(argv[optind++]);
+		opt.font_filename = stringdup(argv[optind++]);
 	}
 
 	if (!opt.font_filename) {
@@ -205,14 +205,14 @@ struct options *parse_options(int argc, char **argv)
 	}
 
 	if (!opt.atlas_filename)
-		opt.atlas_filename = strdup("a.png");
+		opt.atlas_filename = stringdup("a.png");
 	if (!opt.metrics_filename) {
 		switch (opt.format) {
 		case MF_TEXT:
-			opt.metrics_filename = strdup("a.txt");
+			opt.metrics_filename = stringdup("a.txt");
 			break;
 		case MF_BINARY:
-			opt.metrics_filename = strdup("a.bin");
+			opt.metrics_filename = stringdup("a.bin");
 			break;
 		}
 	}
