@@ -33,6 +33,7 @@ static void usage(void)
 	printf("  -W=<n>                   Set atlas width to <n>\n");
 	printf("  -H=<n>                   Set atlas height to <n>\n");
 	printf("  -s=<n>                   Render glyphs with height of <n> pixels\n");
+	printf("  -p=<n>                   Pad glyph with <n> pixels\n");
 	printf("  --metrics-format=[text|binary]\n"
 	       "                           Write metrics as text or binary\n");
 	printf("  --rune=,<range>          Comma separated unicode point or point ranges\n");
@@ -131,7 +132,7 @@ struct options *parse_options(int argc, char **argv)
 	int invalid_arg = 0;
 
 	while (1) {
-		char c = getopt_long(argc, argv, "hvo:m:W:H:s:f:",
+		char c = getopt_long(argc, argv, "hvo:m:W:H:s:p:f:",
 				     long_options, NULL);
 		if (c == -1)
 			break;
@@ -168,6 +169,13 @@ struct options *parse_options(int argc, char **argv)
 			opt.pixel_height = atoi(optarg);
 			if (opt.pixel_height <= 0) {
 				error("invalid size: %s", optarg);
+				invalid_arg = 1;
+			}
+			break;
+		case 'p':
+			opt.padding = atoi(optarg);
+			if (opt.padding < 0) {
+				error("invalid padding: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;

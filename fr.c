@@ -256,11 +256,12 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 }
 
 /* Return numbers of glyphs actually in the atlas */
-int fill_atlas_and_metrics(struct bitmap *atlas, struct raster_glyph *glyph)
+int fill_atlas_and_metrics(struct bitmap *atlas, struct raster_glyph *glyph,
+			   int padding)
 {
 	int i;
-	int pen_x = 0;
-	int pen_y = 0;
+	int pen_x = padding;
+	int pen_y = padding;
 	int line_height = 0;
 	double atlas_scale[2] = {
 		1.0 / (double)atlas->width,
@@ -269,14 +270,14 @@ int fill_atlas_and_metrics(struct bitmap *atlas, struct raster_glyph *glyph)
 
 	i = 0;
 	while (glyph) {
-		if (pen_x + glyph->bitmap.width > atlas->width) {
+		if (pen_x + glyph->bitmap.width + padding > atlas->width) {
 			/* Start a new line */
-			pen_x = 0;
-			pen_y += line_height + 1;
+			pen_x = padding;
+			pen_y += line_height + padding;
 	 		line_height = 0;
 			continue;
 		}
-		if (pen_y + glyph->bitmap.height > atlas->height) {
+		if (pen_y + glyph->bitmap.height + padding > atlas->height) {
 			/* Bitmap is too small */
 			break;
 		}
@@ -313,7 +314,7 @@ int fill_atlas_and_metrics(struct bitmap *atlas, struct raster_glyph *glyph)
 		       metrics->s0, metrics->t0, metrics->s1, metrics->t1);
 #endif
 
-		pen_x += glyph->bitmap.width;
+		pen_x += glyph->bitmap.width + padding;
 		glyph = glyph->next;
 		i++;
 	}
@@ -338,7 +339,7 @@ int rasterize_font(FT_Face face, const struct options *opts)
 	 * texture coordinates.
 	 */
 	atlas = create_bitmap(opts->atlas_width, opts->atlas_height);
-	fill_atlas_and_metrics(atlas, glyphs);
+	fill_atlas_and_metrics(atlas, glyphs, opts->padding);
 
 	/*
 	 * Now the atlas has been filled and we know the glyph texture
@@ -361,5 +362,3 @@ int rasterize_font(FT_Face face, const struct options *opts)
 
 	return 0;
 }
-
-

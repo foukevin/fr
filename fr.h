@@ -24,6 +24,7 @@ struct options {
 	int atlas_width;
 	int atlas_height;
 	int pixel_height;
+	int padding;
 	range_t *ranges;
 };
 
