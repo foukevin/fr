@@ -1,6 +1,8 @@
 #ifndef RASTER_FONT_H
 #define RASTER_FONT_H
 
+#include <stdint.h>
+
 struct metrics_hdr {
 	uint32_t glyph_count;
 	float space_advance;

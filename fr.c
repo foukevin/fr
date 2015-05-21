@@ -331,7 +331,8 @@ int rasterize_font(FT_Face face, const struct options *opts)
 	/*
 	 * Raster all runes into individual bitmaps and gather metrics.
 	 */
-	for (const range_t *range = opts->ranges; range; range = range->next)
+	const range_t *range;
+	for (range = opts->ranges; range; range = range->next)
 		rasterize_runes(face, &glyphs, &num_glyphs, range);
 
 	/*
