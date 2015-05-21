@@ -1,73 +1,78 @@
-ifndef config
-  config=debug
-endif
+all::
 
-ifndef CC
-  CC = gcc
-endif
+### --- CONFIGURATION SECTION ---
+# CFLAGS and LDFLAGS are for the users to override from the command line.
 
-ifndef AR
-  AR = ar
-endif
+CFLAGS = -g -O2 -Wall
+LDFLAGS =
+ALL_CFLAGS = $(CPPFLAGS) $(CFLAGS)
+ALL_LDFLAGS = $(LDFLAGS)
+STRIP ?= strip
 
-ifndef platform
-  platform = $(shell uname -s)
-endif
-export platform
+# Variables
 
-INCLUDES += -I.
-CFLAGS = -Wall -Wextra `freetype-config --cflags` `libpng-config --cflags`
-LIBS += `freetype-config --libs` `libpng-config --libs`
+CC = cc
+AR = ar
+RM = rm -f
+INSTALL = install
+FREETYPE_CFLAGS = $(shell freetype-config --cflags)
+FREETYPE_LIBS = $(shell freetype-config --libs)
+LIBPNG_CFLAGS = $(shell libpng-config --cflags)
+LIBPNG_LIBS = $(shell libpng-config --libs)
 
-ifeq ($(config),debug)
-  OBJDIR = obj/debug
-  TARGETDIR = bin
-  TARGET = $(TARGETDIR)/fr-debug
-  CFLAGS += -std=c99 -g -Wall -Wextra -msse $(DEFINES) $(INCLUDES)
-  LDFLAGS +=
-  LINKCMD = $(CC) -o $(TARGET) $(OBJECTS) $(LDFLAGS) $(LIBS)
-endif
+### --- END CONFIGURATION SECTION ---
 
-ifeq ($(config),release)
-  OBJDIR = obj/release
-  TARGETDIR = bin
-  TARGET = $(TARGETDIR)/fr
-  CFLAGS += -std=c99 -O3 -Wall -Wextra -msse $(DEFINES) $(INCLUDES)
-  LDFLAGS +=
-  LINKCMD = $(CC) -o $(TARGET) $(OBJECTS) $(LDFLAGS) $(LIBS)
-endif
+BASIC_CFLAGS = -I.
+BASIC_LDFLAGS =
 
-OBJECTS := \
-	$(OBJDIR)/error.o \
-	$(OBJDIR)/bitmap.o \
-	$(OBJDIR)/options.o \
-	$(OBJDIR)/fr.o \
-	$(OBJDIR)/main.o
+# Guard against environment variables
+PROGRAM_OBJS =
+PROGRAM =
+
+PROGRAM_OBJS += error.o
+PROGRAM_OBJS += bitmap.o
+PROGRAM_OBJS += options.o
+PROGRAM_OBJS += main.o
+
+# Binary suffix, set to .exe for Windows builds
+X =
+
+PROGRAM = fr$X
+
+OBJECTS = $(PROGRAM_OBJS) fr.o
+
+# Libraries
+
+EXTLIBS =
+
+BASIC_CFLAGS += $(FREETYPE_CFLAGS) $(LIBPNG_CFLAGS)
+EXTLIBS += $(FREETYPE_LIBS) $(LIBPNG_LIBS)
+
+LIBS = $(EXTLIBS)
+
+### Cleaning rules
 
 .PHONY: clean
 
-all: $(TARGETDIR) $(OBJDIR) $(TARGET)
-
-$(TARGET): $(OBJECTS)
-	$(LINKCMD)
-
-$(TARGETDIR):
-	mkdir -p $(TARGETDIR)
-
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
+ALL_CFLAGS += $(BASIC_CFLAGS)
+ALL_LDFLAGS += $(BASIC_LDFLAGS)
 
 clean:
-	rm -f  $(TARGET)
-	rm -rf $(OBJDIR)
+	$(RM) $(OBJECTS)
 
-$(OBJDIR)/error.o: error.c error.h
-	 $(CC) $(CFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/bitmap.o: bitmap.c bitmap.h error.h
-	 $(CC) $(CFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/options.o: options.c fr.h error.h
-	 $(CC) $(CFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/fr.o: fr.c fr.h bitmap.h raster_font.h error.h
-	 $(CC) $(CFLAGS) -o "$@" -c "$<"
-$(OBJDIR)/main.o: main.c fr.h error.h
-	 $(CC) $(CFLAGS) -o "$@" -c "$<"
+### Build rules
+
+.PHONY: all strip
+
+all:: $(PROGRAM)
+
+strip: $(PROGRAM)
+	$(STRIP) $(STRIP_OPTS) $^
+
+.SUFFIXES:
+
+$(OBJECTS): %.o: %.c
+	$(CC) -o $*.o -c $(ALL_CFLAGS) $(EXTRA_CPPFLAGS) $<
+
+$(PROGRAM): $(OBJECTS)
+	$(CC) -o $@ $(OBJECTS) $(ALL_LDFLAGS) $(LIBS)
