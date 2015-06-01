@@ -28,7 +28,11 @@ struct options {
 	range_t *ranges;
 };
 
-struct options *parse_options(int argc, char **argv);
+struct fr {
+	const char *progname;
+};
+
+struct options *parse_options(int argc, char **argv, const struct fr *fr);
 void destroy_options(struct options *opts);
 int rasterize_font(FT_Face face, const struct options *opts);
 

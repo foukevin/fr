@@ -7,6 +7,7 @@
 int main(int argc, char **argv)
 {
 	int status = 0;
+	struct fr *fr, fr_storage;
 
 	FT_Error error;
 	FT_Library library;
@@ -14,7 +15,16 @@ int main(int argc, char **argv)
 
 	ERROR_INIT;
 
-	struct options *opts = parse_options(argc, argv);
+	fr = &fr_storage;
+	memset(fr, 0, sizeof(*fr));
+
+	if (*argv == NULL) {
+		fr->progname = "fr";
+	} else {
+		fr->progname = *argv;
+	}
+
+	struct options *opts = parse_options(argc, argv, fr);
 	if (!opts) {
 		destroy_options(opts);
 		return 1;

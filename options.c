@@ -7,7 +7,6 @@
 #include <string.h>
 
 static struct options opt;
-static const char *arg0 = "fr";
 static const char *version = "0.1";
 
 static char *mystrdup(const char *s)
@@ -22,10 +21,10 @@ static char *mystrdup(const char *s)
 	return d;
 }
 
-static void usage(void)
+static void usage(const struct fr *fr)
 {
 	printf("Font rasterizer version %s\n", version);
-	printf("Usage: %s [options] font\n", arg0);
+	printf("Usage: %s [options] font\n", fr->progname);
 	printf("Options:\n");
 	printf("  --help                   Display this information\n");
 	printf("  -o=<file>                Place the output atlas png into <file>\n");
@@ -132,7 +131,7 @@ static int get_ranges(const char *s)
 	return err;
 }
 
-struct options *parse_options(int argc, char **argv)
+struct options *parse_options(int argc, char **argv, const struct fr *fr)
 {
 	int invalid_arg = 0;
 
@@ -144,7 +143,7 @@ struct options *parse_options(int argc, char **argv)
 
 		switch (c) {
 		case 'h':
-			usage();
+			usage(fr);
 			exit(0);
 			break;
 		case 'v':
