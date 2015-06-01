@@ -12,6 +12,8 @@ int main(int argc, char **argv)
 	FT_Library library;
 	FT_Face face;
 
+	ERROR_INIT;
+
 	struct options *opts = parse_options(argc, argv);
 	if (!opts) {
 		destroy_options(opts);
