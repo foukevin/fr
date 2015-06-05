@@ -30,9 +30,11 @@ struct options {
 
 struct fr {
 	const char *progname;
+	char **argv;
+	int argc;
 };
 
-struct options *parse_options(int argc, char **argv, const struct fr *fr);
+struct options *parse_options(struct fr *fr);
 void destroy_options(struct options *opts);
 int rasterize_font(FT_Face face, const struct options *opts);
 

@@ -24,7 +24,10 @@ int main(int argc, char **argv)
 		fr->progname = *argv;
 	}
 
-	struct options *opts = parse_options(argc, argv, fr);
+	fr->argc = argc;
+	fr->argv = argv;
+
+	struct options *opts = parse_options(fr);
 	if (!opts) {
 		destroy_options(opts);
 		return 1;

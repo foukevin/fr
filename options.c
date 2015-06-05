@@ -131,12 +131,12 @@ static int get_ranges(const char *s)
 	return err;
 }
 
-struct options *parse_options(int argc, char **argv, const struct fr *fr)
+struct options *parse_options(struct fr *fr)
 {
 	int invalid_arg = 0;
 
 	while (1) {
-		char c = getopt_long(argc, argv, "hvo:m:W:H:s:p:f:",
+		char c = getopt_long(fr->argc, fr->argv, "hvo:m:W:H:s:p:f:",
 				     long_options, NULL);
 		if (c == -1)
 			break;
@@ -203,12 +203,12 @@ struct options *parse_options(int argc, char **argv, const struct fr *fr)
 	}
 
 	/* Handle non-option arguments (ie: font names) */
-	if (optind < argc) {
+	if (optind < fr->argc) {
 		/*
 		 * Take the first positional argument, pending ones
 		 * are just ignored.
 		 */
-		opt.font_filename = mystrdup(argv[optind++]);
+		opt.font_filename = mystrdup(fr->argv[optind++]);
 	}
 
 	if (!opt.font_filename) {
