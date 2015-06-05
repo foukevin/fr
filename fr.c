@@ -47,7 +47,6 @@ static FT_Int32 load_flags =  FT_LOAD_DEFAULT;
 
 int main(int argc, char **argv)
 {
-	int status = 0;
 	struct fr *fr, fr_storage;
 
 	FT_Error error;
@@ -82,7 +81,7 @@ int main(int argc, char **argv)
 	if (error)
 		die("unable to set font size");
 
-	status = rasterize_font(face, fr);
+	rasterize_font(face, fr);
 
 	FT_Done_Face(face);
 	FT_Done_FreeType(library);
@@ -109,7 +108,7 @@ int main(int argc, char **argv)
 	}
 	fr->ranges = NULL;
 
-	return status;
+	return fr->return_value;
 }
 
 
@@ -390,7 +389,7 @@ int fill_atlas_and_metrics(struct bitmap *atlas, struct raster_glyph *glyph,
 	return i;
 };
 
-int rasterize_font(FT_Face face, const struct fr *fr)
+void rasterize_font(FT_Face face, const struct fr *fr)
 {
 	struct bitmap *atlas = NULL;
 	struct raster_glyph *glyphs = NULL;
@@ -428,6 +427,4 @@ int rasterize_font(FT_Face face, const struct fr *fr)
 
 	if (fr->option_verbose)
 		printf("%d glyphs rasterized to atlas\nDone.\n", num_glyphs);
-
-	return 0;
 }

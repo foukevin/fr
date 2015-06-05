@@ -30,10 +30,10 @@ struct fr {
 	const char *progname;
 	char **argv;
 	int argc;
-
+	int return_value;
 };
 
 void parse_options(struct fr *fr);
-int rasterize_font(FT_Face face, const struct fr *fr);
+void rasterize_font(FT_Face face, const struct fr *fr);
 
 #endif /* FR_H */
