@@ -38,6 +38,7 @@ static void usage(const struct fr *fr)
 	printf("Notes:\n");
 	printf("  Ranges are in the form <c>, <l>:<u> or <l>+<n>; "
 	       "of single code point <c>, lower bound <l>, upper bound <u> and extend <n>\n");
+	exit(0);
 }
 
 static struct option long_options[] = {
@@ -87,8 +88,8 @@ static int extract_range(int *lo, int *hi, const char *s)
 }
 
 /*
- * Sets the glyph metrics format of the option struct.
- * Returns 0 (no error) or 1 whether the format is valid or not.
+ * Returns the requested metrics format.
+ * Returns -1 if the format is not a valid one.
  */
 static int get_metrics_format(const char *s)
 {
@@ -96,7 +97,7 @@ static int get_metrics_format(const char *s)
 		return MF_TEXT;
 	else if (!strcmp(s, "binary"))
 		return MF_BINARY;
-	return 0;
+	return -1;
 }
 
 static int get_ranges(const char *s, struct fr *fr)
@@ -127,20 +128,20 @@ static int get_ranges(const char *s, struct fr *fr)
 	return err;
 }
 
+int fr_getopt(struct fr *fr)
+{
+	return getopt_long(fr->argc, fr->argv, "hvo:m:W:H:s:p:f:", long_options, NULL);
+}
+
 void parse_options(struct fr *fr)
 {
+	int opt;
 	int invalid_arg = 0;
 
-	while (1) {
-		char c = getopt_long(fr->argc, fr->argv, "hvo:m:W:H:s:p:f:",
-				     long_options, NULL);
-		if (c == -1)
-			break;
-
-		switch (c) {
+	while ((opt = fr_getopt(fr)) != -1) {
+		switch (opt) {
 		case 'h':
 			usage(fr);
-			exit(0);
 			break;
 		case 'v':
 			fr->option_verbose = 1;
@@ -184,7 +185,7 @@ void parse_options(struct fr *fr)
 			break;
 		case 'f':
 			fr->format = get_metrics_format(optarg);
-			if (!fr->format) {
+			if (fr->format == -1) {
 				error("invalid metrics format: %s", optarg);
 				invalid_arg = 1;
 			}

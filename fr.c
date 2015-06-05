@@ -149,7 +149,7 @@ int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
 	struct metrics_hdr def;
 	FILE *fp = NULL;
 
-	fp = (format == MF_BINARY) ? fopen(path, "wb") : fopen(path, "w");
+	fp = fopen(path, format == MF_BINARY ? "wb" : "w");
 	if (!fp) {
 		error("opening %s", path);
 		return 1;
@@ -159,8 +159,12 @@ int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
 	case MF_TEXT:
 		fprintf(fp, txt_hdr_fmt, space_advance, num_glyphs);
 		int i = 0;
-		for (glyph = glyph_list; glyph; glyph = glyph->next)
-			write_text_glyph(fp, i++, glyph);
+		glyph = glyph_list;
+		while (glyph) {
+			write_text_glyph(fp, i, glyph);
+			++i;
+			glyph = glyph->next;
+		}
 		break;
 	case MF_BINARY:
 		def.glyph_count = num_glyphs;

@@ -10,8 +10,8 @@ typedef struct rune_range {
 	struct rune_range *next;
 } range_t;
 
-#define MF_TEXT (1)
-#define	MF_BINARY (2)
+#define MF_TEXT (0)
+#define MF_BINARY (1)
 
 struct fr {
 	/* Options */
