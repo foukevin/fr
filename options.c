@@ -6,7 +6,6 @@
 #include <stdlib.h> /* exit */
 #include <string.h>
 
-static struct options opt;
 static const char *version = "0.1";
 
 static char *mystrdup(const char *s)
@@ -91,19 +90,16 @@ static int extract_range(int *lo, int *hi, const char *s)
  * Sets the glyph metrics format of the option struct.
  * Returns 0 (no error) or 1 whether the format is valid or not.
  */
-static int get_format(const char *s)
+static int get_metrics_format(const char *s)
 {
 	if (!strcmp(s, "text"))
-		opt.format = MF_TEXT;
+		return MF_TEXT;
 	else if (!strcmp(s, "binary"))
-		opt.format = MF_BINARY;
-	else
-		return 1;
-
+		return MF_BINARY;
 	return 0;
 }
 
-static int get_ranges(const char *s)
+static int get_ranges(const char *s, struct fr *fr)
 {
 	int lo, hi, err = 0;
 	const char *delim = ",";
@@ -117,8 +113,8 @@ static int get_ranges(const char *s)
 			range_t *range = malloc(sizeof(range_t));
 			range->lo = lo;
 			range->hi = hi;
-			range->next = opt.ranges;
-			opt.ranges = range;
+			range->next = fr->ranges;
+			fr->ranges = range;
 		} else {
 			warning("invalid range %s\n", tok);
 			err = 1;
@@ -131,7 +127,7 @@ static int get_ranges(const char *s)
 	return err;
 }
 
-struct options *parse_options(struct fr *fr)
+void parse_options(struct fr *fr)
 {
 	int invalid_arg = 0;
 
@@ -147,47 +143,48 @@ struct options *parse_options(struct fr *fr)
 			exit(0);
 			break;
 		case 'v':
-			opt.verbose = 1;
+			fr->option_verbose = 1;
 			break;
 		case 'o':
-			opt.atlas_filename = mystrdup(optarg);
+			fr->atlas_filename = mystrdup(optarg);
 			break;
 		case 'm':
-			opt.metrics_filename = mystrdup(optarg);
+			fr->metrics_filename = mystrdup(optarg);
 			break;
 		case 'W':
-			opt.atlas_width = atoi(optarg);
-			if (opt.atlas_width <= 0) {
+			fr->atlas_width = atoi(optarg);
+			if (fr->atlas_width <= 0) {
 				error("invalid atlas width: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
 		case 'H':
-			opt.atlas_height = atoi(optarg);
-			if (opt.atlas_height <= 0) {
+			fr->atlas_height = atoi(optarg);
+			if (fr->atlas_height <= 0) {
 				error("invalid atlas height: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
 		case 's':
-			opt.pixel_height = atoi(optarg);
-			if (opt.pixel_height <= 0) {
+			fr->pixel_height = atoi(optarg);
+			if (fr->pixel_height <= 0) {
 				error("invalid size: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
 		case 'p':
-			opt.padding = atoi(optarg);
-			if (opt.padding < 0) {
+			fr->padding = atoi(optarg);
+			if (fr->padding < 0) {
 				error("invalid padding: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
 		case 'r':
-			get_ranges(optarg);
+			get_ranges(optarg, fr);
 			break;
 		case 'f':
-			if (get_format(optarg)) {
+			fr->format = get_metrics_format(optarg);
+			if (!fr->format) {
 				error("invalid metrics format: %s", optarg);
 				invalid_arg = 1;
 			}
@@ -199,7 +196,7 @@ struct options *parse_options(struct fr *fr)
 		}
 
 		if (invalid_arg)
-			return NULL;
+			exit(1);
 	}
 
 	/* Handle non-option arguments (ie: font names) */
@@ -208,72 +205,44 @@ struct options *parse_options(struct fr *fr)
 		 * Take the first positional argument, pending ones
 		 * are just ignored.
 		 */
-		opt.font_filename = mystrdup(fr->argv[optind++]);
+		fr->font_filename = mystrdup(fr->argv[optind++]);
 	}
 
-	if (!opt.font_filename) {
+	if (!fr->font_filename) {
 		error("no input font file");
-		return NULL;
+		exit(1);
 	}
 
-	if (!opt.atlas_filename)
-		opt.atlas_filename = mystrdup("a.png");
-	if (!opt.metrics_filename) {
-		switch (opt.format) {
+	if (!fr->atlas_filename)
+		fr->atlas_filename = mystrdup("a.png");
+	if (!fr->metrics_filename) {
+		switch (fr->format) {
 		case MF_TEXT:
-			opt.metrics_filename = mystrdup("a.txt");
+			fr->metrics_filename = mystrdup("a.txt");
 			break;
 		case MF_BINARY:
-			opt.metrics_filename = mystrdup("a.bin");
+			fr->metrics_filename = mystrdup("a.bin");
 			break;
 		}
 	}
 
-	if (!opt.atlas_width)
-		opt.atlas_width = 256;
-	if (!opt.atlas_height)
-		opt.atlas_height = 256;
-	if (!opt.pixel_height)
-		opt.pixel_height = 16;
+	if (!fr->atlas_width)
+		fr->atlas_width = 256;
+	if (!fr->atlas_height)
+		fr->atlas_height = 256;
+	if (!fr->pixel_height)
+		fr->pixel_height = 16;
 
-	if (!opt.ranges)
-		get_ranges("33:126");
+	if (!fr->ranges)
+		get_ranges("33:126", fr);
 
-	if (opt.verbose) {
-		printf("input font file: %s\n", opt.font_filename);
-		printf("output atlas file: %s\n", opt.atlas_filename);
-		printf("output metrics file: %s\n", opt.metrics_filename);
-		printf("size: %d\n", opt.pixel_height);
-		const range_t *range = opt.ranges;
+	if (fr->option_verbose) {
+		printf("input font file: %s\n", fr->font_filename);
+		printf("output atlas file: %s\n", fr->atlas_filename);
+		printf("output metrics file: %s\n", fr->metrics_filename);
+		printf("size: %d\n", fr->pixel_height);
+		const range_t *range = fr->ranges;
 		for (; range; range = range->next)
 			printf("rune range: %d to %d\n", range->lo, range->hi);
 	}
-	return &opt;
-}
-
-void destroy_options(struct options *opts)
-{
-	if (!opts)
-		return;
-
-	if (opts->atlas_filename) {
-		free(opts->atlas_filename);
-		opts->atlas_filename = NULL;
-	}
-	if (opts->metrics_filename) {
-		free(opts->metrics_filename);
-		opts->metrics_filename = NULL;
-	}
-	if (opts->font_filename) {
-		free(opts->font_filename);
-		opts->font_filename = NULL;
-	}
-
-	range_t *range = opts->ranges;
-	while (range) {
-		range_t *next = range->next;
-		free(range);
-		range = next;
-	}
-	opts->ranges = NULL;
 }

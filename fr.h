@@ -10,32 +10,30 @@ typedef struct rune_range {
 	struct rune_range *next;
 } range_t;
 
-enum metrics_format {
-	MF_TEXT,
-	MF_BINARY,
-};
+#define MF_TEXT (1)
+#define	MF_BINARY (2)
 
-struct options {
+struct fr {
+	/* Options */
 	char *atlas_filename;
 	char *metrics_filename;
 	char *font_filename;
-	int verbose;
-	enum metrics_format format;
+	int option_verbose;
+	int format;
 	int atlas_width;
 	int atlas_height;
 	int pixel_height;
 	int padding;
 	range_t *ranges;
-};
 
-struct fr {
+	/* State information */
 	const char *progname;
 	char **argv;
 	int argc;
+
 };
 
-struct options *parse_options(struct fr *fr);
-void destroy_options(struct options *opts);
-int rasterize_font(FT_Face face, const struct options *opts);
+void parse_options(struct fr *fr);
+int rasterize_font(FT_Face face, const struct fr *fr);
 
 #endif /* FR_H */

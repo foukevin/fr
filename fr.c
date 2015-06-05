@@ -7,6 +7,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+/* struct holding a glyph metrics */
 struct glyph_metrics {
 	float bearing[2];
 	float advance[2];
@@ -44,6 +45,74 @@ static const char *txt_glyph_fmt =
 
 static FT_Int32 load_flags =  FT_LOAD_DEFAULT;
 
+int main(int argc, char **argv)
+{
+	int status = 0;
+	struct fr *fr, fr_storage;
+
+	FT_Error error;
+	FT_Library library;
+	FT_Face face;
+
+	ERROR_INIT;
+
+	fr = &fr_storage;
+	memset(fr, 0, sizeof(*fr));
+
+	if (*argv == NULL) {
+		fr->progname = "fr";
+	} else {
+		fr->progname = *argv;
+	}
+
+	fr->argc = argc;
+	fr->argv = argv;
+
+	parse_options(fr);
+
+	error = FT_Init_FreeType(&library);
+	if (error)
+		die("unable to initialize FreeType");
+
+	error = FT_New_Face(library, fr->font_filename, 0, &face);
+	if (error)
+		die("unable to load font %s", fr->font_filename);
+
+	error = FT_Set_Pixel_Sizes(face, 0, fr->pixel_height);
+	if (error)
+		die("unable to set font size");
+
+	status = rasterize_font(face, fr);
+
+	FT_Done_Face(face);
+	FT_Done_FreeType(library);
+
+	/* clean up */
+	if (fr->atlas_filename) {
+		free(fr->atlas_filename);
+		fr->atlas_filename = NULL;
+	}
+	if (fr->metrics_filename) {
+		free(fr->metrics_filename);
+		fr->metrics_filename = NULL;
+	}
+	if (fr->font_filename) {
+		free(fr->font_filename);
+		fr->font_filename = NULL;
+	}
+
+	range_t *range = fr->ranges;
+	while (range) {
+		range_t *next = range->next;
+		free(range);
+		range = next;
+	}
+	fr->ranges = NULL;
+
+	return status;
+}
+
+
 void write_binary_glyph(FILE *fp, const struct glyph_metrics *metrics)
 {
 	struct glyph_def m;
@@ -75,8 +144,7 @@ void write_text_glyph(FILE *fp, int i, const struct raster_glyph *glyph)
 }
 
 int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
-		  float space_advance, const char *path,
-		  enum metrics_format format)
+		  float space_advance, const char *path, int format)
 {
 	const struct raster_glyph *glyph;
 	struct metrics_hdr def;
@@ -322,7 +390,7 @@ int fill_atlas_and_metrics(struct bitmap *atlas, struct raster_glyph *glyph,
 	return i;
 };
 
-int rasterize_font(FT_Face face, const struct options *opts)
+int rasterize_font(FT_Face face, const struct fr *fr)
 {
 	struct bitmap *atlas = NULL;
 	struct raster_glyph *glyphs = NULL;
@@ -332,23 +400,23 @@ int rasterize_font(FT_Face face, const struct options *opts)
 	 * Raster all runes into individual bitmaps and gather metrics.
 	 */
 	const range_t *range;
-	for (range = opts->ranges; range; range = range->next)
+	for (range = fr->ranges; range; range = range->next)
 		rasterize_runes(face, &glyphs, &num_glyphs, range);
 
 	/*
 	 * Build the atlas texture from the rasterized glyphs and fill the
 	 * texture coordinates.
 	 */
-	atlas = create_bitmap(opts->atlas_width, opts->atlas_height);
-	fill_atlas_and_metrics(atlas, glyphs, opts->padding);
+	atlas = create_bitmap(fr->atlas_width, fr->atlas_height);
+	fill_atlas_and_metrics(atlas, glyphs, fr->padding);
 
 	/*
 	 * Now the atlas has been filled and we know the glyph texture
 	 * coordinates, we can proceed and write the files.
 	 */
-	write_atlas(atlas, opts->atlas_filename);
+	write_atlas(atlas, fr->atlas_filename);
 	write_metrics(glyphs, num_glyphs, space_advance(face),
-		      opts->metrics_filename, opts->format);
+		      fr->metrics_filename, fr->format);
 
 	/* Free atlas and glyph list */
 	destroy_bitmap(atlas);
@@ -358,7 +426,7 @@ int rasterize_font(FT_Face face, const struct options *opts)
 		glyphs = next;
 	}
 
-	if (opts->verbose)
+	if (fr->option_verbose)
 		printf("%d glyphs rasterized to atlas\nDone.\n", num_glyphs);
 
 	return 0;

@@ -32,7 +32,6 @@ PROGRAM =
 PROGRAM_OBJS += error.o
 PROGRAM_OBJS += bitmap.o
 PROGRAM_OBJS += options.o
-PROGRAM_OBJS += main.o
 
 # Binary suffix, set to .exe for Windows builds
 X =
