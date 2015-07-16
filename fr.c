@@ -30,7 +30,7 @@ static const char *txt_hdr_fmt =
 "glyph_count=%d\n";
 
 static const char *txt_glyph_fmt =
-"\n# Glyph %d\n"
+"\n# Glyph %d (%s)\n"
 "rune=%d\n"
 "horizontal_bearing=%f\n"
 "vertical_bearing=%f\n"
@@ -134,7 +134,38 @@ void write_text_glyph(FILE *fp, int i, const struct raster_glyph *glyph)
 {
 	const struct glyph_metrics *metrics;
 	metrics = &glyph->metrics;
-	fprintf(fp, txt_glyph_fmt, i, glyph->rune,
+
+	/* Encode unicode code point into utf8 stream */
+	uint32_t rune = glyph->rune;
+	char utf8[5];
+	if (rune < 0x80) {
+		/* 1 byte encoding */
+		utf8[0] = (uint8_t)rune;
+		utf8[1] = '\0';
+	} else if (rune < 0x800) {
+		/* 2 bytes encoding */
+		utf8[0] = 0xC0 | (rune >> 6);
+		utf8[1] = 0x80 | (rune & 0x3F);
+		utf8[2] = '\0';
+	} else if (rune < 0x10000) {
+		/* 3 bytes encoding */
+		utf8[0] = 0xE0 | (rune >> 12);
+		utf8[1] = 0x80 | ((rune >> 6) & 0x3F);
+		utf8[2] = 0x80 | (rune & 0x3F);
+		utf8[3] = '\0';
+	} else if (rune < 0x200000) {
+		/* 4 bytes encoding */
+		utf8[0] = 0xF0 | (rune >> 24);
+		utf8[1] = 0x80 | ((rune >> 12) & 0x3F);
+		utf8[2] = 0x80 | ((rune >> 6) & 0x3F);
+		utf8[3] = 0x80 | (rune & 0x3F);
+		utf8[4] = '\0';
+	} else {
+		/* not supported yet */
+		utf8[0] = '\0';
+	}
+
+	fprintf(fp, txt_glyph_fmt, i, utf8, glyph->rune,
 		metrics->bearing[0], metrics->bearing[1],
 		metrics->advance[0], metrics->advance[1],
 		metrics->size[0], metrics->size[1],
