@@ -280,7 +280,7 @@ png_failure:
 	return 1;
 }
 
-float space_advance(FT_Face face)
+float space_advance(FT_Face face, int size)
 {
 	float advance;
 	FT_UInt glyph_index;
@@ -292,14 +292,14 @@ float space_advance(FT_Face face)
 		advance = 0.0f;
 	} else {
 		slot = face->glyph;
-		advance = (float)slot->metrics.horiAdvance / 65535.0f;
+		advance = (float)slot->metrics.horiAdvance / (63.0f * (float)size);
 	}
 
 	return advance;
 }
 
 int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
-		    const range_t *range)
+		    const range_t *range, int size, int border)
 {
 	FT_UInt glyph_index;
 	FT_Render_Mode render_mode = FT_RENDER_MODE_NORMAL;
@@ -335,18 +335,28 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 			continue;
 		}
 
+		width += border * 2;
+		height += border * 2;
+
 		struct raster_glyph *glyph = malloc(sizeof(*glyph));
 		bitmap_alloc_pixels(&glyph->bitmap, width, height);
-		bitmap_blit_ft_bitmap(&glyph->bitmap, &face->glyph->bitmap, 0, 0);
+		bitmap_blit_ft_bitmap(&glyph->bitmap, &face->glyph->bitmap,
+				      border, border);
 
 		glyph->rune = i;
 		struct glyph_metrics *metrics = &glyph->metrics;
-		metrics->advance[0] = (float)slot->metrics.horiAdvance / 65535.0f;
-		metrics->advance[1] = (float)slot->metrics.vertAdvance / 65535.0f;
-		metrics->bearing[0] = slot->metrics.horiBearingX / 65535.0f;
-		metrics->bearing[1] = slot->metrics.horiBearingY / 65535.0f;
-		metrics->size[0] = slot->metrics.width / 65535.0f;
-		metrics->size[1] = slot->metrics.height / 65535.0f;
+		/*
+		 * Values of FT_Glyph_Metrics are expressed in 26.6
+		 * fractional pixel format.
+		 */
+		const float fborder = 63.0f * (float)border;
+		const float frac = 63.0f * (float)size;
+		metrics->advance[0] = (float)slot->metrics.horiAdvance / frac;
+		metrics->advance[1] = (float)slot->metrics.vertAdvance / frac;
+		metrics->bearing[0] = (slot->metrics.horiBearingX - fborder) / frac;
+		metrics->bearing[1] = (slot->metrics.horiBearingY - fborder) / frac;
+		metrics->size[0] = (slot->metrics.width + (fborder * 2.0f)) / frac;
+		metrics->size[1] = (slot->metrics.height + (fborder * 2.0f)) / frac;
 
 		/* Advance next glyph */
 		glyph->next = *head;
@@ -435,7 +445,8 @@ void rasterize_font(FT_Face face, const struct fr *fr)
 	 */
 	const range_t *range;
 	for (range = fr->ranges; range; range = range->next)
-		rasterize_runes(face, &glyphs, &num_glyphs, range);
+		rasterize_runes(face, &glyphs, &num_glyphs, range,
+				fr->pixel_height, fr->border);
 
 	/*
 	 * Build the atlas texture from the rasterized glyphs and fill the
@@ -449,7 +460,7 @@ void rasterize_font(FT_Face face, const struct fr *fr)
 	 * coordinates, we can proceed and write the files.
 	 */
 	write_atlas(atlas, fr->atlas_filename);
-	write_metrics(glyphs, num_glyphs, space_advance(face),
+	write_metrics(glyphs, num_glyphs, space_advance(face, fr->pixel_height),
 		      fr->metrics_filename, fr->format);
 
 	/* Free atlas and glyph list */

@@ -23,7 +23,8 @@ struct fr {
 	int atlas_width;
 	int atlas_height;
 	int pixel_height;
-	int padding;
+	int padding; /* padding between glyphs in pixel */
+	int border; /* border around glyph (considered part of the glyph) */
 	range_t *ranges;
 
 	/* State information */

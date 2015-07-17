@@ -32,6 +32,7 @@ static void usage(const struct fr *fr)
 	printf("  -H=<n>                   Set atlas height to <n>\n");
 	printf("  -s=<n>                   Render glyphs with height of <n> pixels\n");
 	printf("  -p=<n>                   Pad glyph with <n> pixels\n");
+	printf("  -b=<n>                   Glyph border of <n> pixels\n");
 	printf("  --metrics-format=[text|binary]\n"
 	       "                           Write metrics as text or binary\n");
 	printf("  --rune=,<range>          Comma separated unicode point or point ranges\n");
@@ -130,7 +131,7 @@ static int get_ranges(const char *s, struct fr *fr)
 
 int fr_getopt(struct fr *fr)
 {
-	return getopt_long(fr->argc, fr->argv, "hvo:m:W:H:s:p:f:", long_options, NULL);
+	return getopt_long(fr->argc, fr->argv, "hvo:m:W:H:s:p:b:f:", long_options, NULL);
 }
 
 void parse_options(struct fr *fr)
@@ -177,6 +178,13 @@ void parse_options(struct fr *fr)
 			fr->padding = atoi(optarg);
 			if (fr->padding < 0) {
 				error("invalid padding: %s", optarg);
+				invalid_arg = 1;
+			}
+			break;
+		case 'b':
+			fr->border = atoi(optarg);
+			if (fr->border < 0) {
+				error("invalid border: %s", optarg);
 				invalid_arg = 1;
 			}
 			break;
