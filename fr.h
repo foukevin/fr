@@ -25,6 +25,7 @@ struct fr {
 	int pixel_height;
 	int padding; /* padding between glyphs in pixel */
 	int border; /* border around glyph (considered part of the glyph) */
+	int no_antialias; /* border around glyph (considered part of the glyph) */
 	range_t *ranges;
 
 	/* State information */

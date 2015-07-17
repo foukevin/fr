@@ -6,6 +6,7 @@
 #include <png.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_BITMAP_H
 
 /* struct holding a glyph metrics */
 struct glyph_metrics {
@@ -43,15 +44,14 @@ static const char *txt_glyph_fmt =
 "s1=%f\n"
 "t1=%f\n";
 
-static FT_Int32 load_flags =  FT_LOAD_DEFAULT;
+static FT_Library ft_library;
+static FT_Face ft_face;
 
 int main(int argc, char **argv)
 {
 	struct fr *fr, fr_storage;
 
 	FT_Error error;
-	FT_Library library;
-	FT_Face face;
 
 	ERROR_INIT;
 
@@ -69,22 +69,22 @@ int main(int argc, char **argv)
 
 	parse_options(fr);
 
-	error = FT_Init_FreeType(&library);
+	error = FT_Init_FreeType(&ft_library);
 	if (error)
 		die("unable to initialize FreeType");
 
-	error = FT_New_Face(library, fr->font_filename, 0, &face);
+	error = FT_New_Face(ft_library, fr->font_filename, 0, &ft_face);
 	if (error)
 		die("unable to load font %s", fr->font_filename);
 
-	error = FT_Set_Pixel_Sizes(face, 0, fr->pixel_height);
+	error = FT_Set_Pixel_Sizes(ft_face, 0, fr->pixel_height);
 	if (error)
 		die("unable to set font size");
 
-	rasterize_font(face, fr);
+	rasterize_font(ft_face, fr);
 
-	FT_Done_Face(face);
-	FT_Done_FreeType(library);
+	FT_Done_Face(ft_face);
+	FT_Done_FreeType(ft_library);
 
 	/* clean up */
 	if (fr->atlas_filename) {
@@ -287,7 +287,7 @@ float space_advance(FT_Face face, int size)
 	FT_GlyphSlot slot;
 
 	glyph_index = FT_Get_Char_Index(face, ' ');
-	if (FT_Load_Glyph(face, glyph_index, load_flags)) {
+	if (FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT)) {
 		warning("unaible to retrieve horizontal space advance");
 		advance = 0.0f;
 	} else {
@@ -299,13 +299,29 @@ float space_advance(FT_Face face, int size)
 }
 
 int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
-		    const range_t *range, int size, int border)
+		    const range_t *range, const struct fr *fr)
 {
+	int size = fr->pixel_height;
+	int border = fr->border;
+	int no_antialias = fr->no_antialias;
+
 	FT_UInt glyph_index;
-	FT_Render_Mode render_mode = FT_RENDER_MODE_NORMAL;
+	FT_Int32 load_flags;
+	FT_Render_Mode render_mode;
 	FT_GlyphSlot slot;
 	uint32_t i;
 
+	if (no_antialias) {
+		//load_flags = FT_LOAD_TARGET_MONO | FT_LOAD_NO_BITMAP;
+		load_flags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
+		render_mode = FT_RENDER_MODE_MONO;
+	} else {
+		load_flags = FT_LOAD_DEFAULT | FT_LOAD_NO_BITMAP;
+		render_mode = FT_RENDER_MODE_NORMAL;
+	}
+
+	FT_Bitmap ft_bitmap;
+	FT_Bitmap_Init(&ft_bitmap);
 	/*
 	 * Because the raster_glyph list is single-linked, every insertion
 	 * is done at the front. Therefore runes are processed in reverse
@@ -316,9 +332,14 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 	for (i = range->hi; i >= range->lo; i--) {
 		glyph_index = FT_Get_Char_Index(face, i);
 
-		if (FT_Load_Glyph(face, glyph_index, load_flags)
-		    || FT_Render_Glyph(face->glyph, render_mode)) {
-			warning("skipping rune U+%04X (unable to load/render glyph)", i);
+		if (FT_Load_Glyph(face, glyph_index, load_flags)) {
+			warning("skipping rune U+%04X (unable to load glyph)", i);
+			continue;
+		}
+
+		slot = face->glyph;
+		if (FT_Render_Glyph(slot, render_mode)) {
+			warning("skipping rune U+%04X (unable to render glyph)", i);
 			continue;
 		}
 
@@ -327,9 +348,9 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 			continue;
 		}
 
-		slot = face->glyph;
-		int width = face->glyph->bitmap.width;
-		int height = face->glyph->bitmap.rows;
+
+		int width = slot->bitmap.width;
+		int height = slot->bitmap.rows;
 		if (!width || !height) {
 			warning("skipping rune U+%04X (zero width/height)", i);
 			continue;
@@ -338,10 +359,19 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 		width += border * 2;
 		height += border * 2;
 
+		/*
+		 * Make sure the bitmap is 8 bpp
+		 */
 		struct raster_glyph *glyph = malloc(sizeof(*glyph));
 		bitmap_alloc_pixels(&glyph->bitmap, width, height);
-		bitmap_blit_ft_bitmap(&glyph->bitmap, &face->glyph->bitmap,
+#if 0
+		FT_Bitmap_Convert(ft_library, &slot->bitmap, &ft_bitmap, 0);
+		bitmap_blit_ft_bitmap(&glyph->bitmap, &ft_bitmap,
 				      border, border);
+#else
+		bitmap_blit_ft_bitmap(&glyph->bitmap, &slot->bitmap,
+				      border, border);
+#endif
 
 		glyph->rune = i;
 		struct glyph_metrics *metrics = &glyph->metrics;
@@ -363,6 +393,7 @@ int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 		*head = glyph;
 		(*num_glyphs)++;
 	}
+	FT_Bitmap_Done(ft_library, &ft_bitmap);
 
 	return 0;
 }
@@ -445,8 +476,7 @@ void rasterize_font(FT_Face face, const struct fr *fr)
 	 */
 	const range_t *range;
 	for (range = fr->ranges; range; range = range->next)
-		rasterize_runes(face, &glyphs, &num_glyphs, range,
-				fr->pixel_height, fr->border);
+		rasterize_runes(face, &glyphs, &num_glyphs, range, fr);
 
 	/*
 	 * Build the atlas texture from the rasterized glyphs and fill the
