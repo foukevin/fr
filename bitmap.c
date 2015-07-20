@@ -43,17 +43,40 @@ void bitmap_blit(struct bitmap *bp, const struct bitmap *src, int x, int y)
 	}
 }
 
-void bitmap_blit_ft_bitmap(struct bitmap *bp, const FT_Bitmap *ftbp, int x, int y)
+static inline uint8_t get_pixel_value(const FT_Bitmap *ft_bitmap, int x, int y)
+{
+	uint8_t byte = ft_bitmap->buffer[(ft_bitmap->pitch * y) + (x / 8)];
+	uint8_t bit_mask = 0x80 >> (x % 8);
+	return (byte & bit_mask) ? 255 : 0;
+}
+
+void bitmap_blit_ft_bitmap(struct bitmap *bitmap, const FT_Bitmap *ft_bitmap,
+			   int x, int y)
 {
 	unsigned int row;
-	int width = ftbp->width;
-	int height = ftbp->rows;
+	int width = ft_bitmap->width;
+	int height = ft_bitmap->rows;
 
-	if ((x + width) > bp->width || (y + height) > bp->height)
+	if ((x + width) > bitmap->width || (y + height) > bitmap->height)
 		return;
 
-	for (row = 0; row < ftbp->rows; ++row, ++y) {
-        	memcpy(bitmap_get_pixel(bp, x, y), &ftbp->buffer[row * width],
-		       sizeof(uint8_t) * width);
+	switch (ft_bitmap->pixel_mode) {
+	case FT_PIXEL_MODE_GRAY:
+		for (row = 0; row < ft_bitmap->rows; ++row, ++y) {
+			memcpy(bitmap_get_pixel(bitmap, x, y),
+			       &ft_bitmap->buffer[row * width],
+			       sizeof(uint8_t) * width);
+		}
+		break;
+	case FT_PIXEL_MODE_MONO:
+		printf("pitch: %d\n", ft_bitmap->pitch);
+		for (row = 0; row < height; ++row, ++y) {
+			int i;
+			for (i = 0; i < width; ++i) {
+				uint8_t *pixel = bitmap_get_pixel(bitmap, i, y);
+				*pixel = get_pixel_value(ft_bitmap, i, y);
+			}
+		}
+		break;
 	}
 }

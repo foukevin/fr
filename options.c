@@ -17,6 +17,7 @@ static char *mystrdup(const char *s)
 		die("out of memory");
 
 	strncpy(d, s, len);
+	d[len] = '\0';
 	return d;
 }
 

@@ -215,7 +215,7 @@ int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
 	return 0;
 }
 
-int write_atlas(const struct bitmap *bp, const char *file_name)
+int write_atlas(const struct bitmap *bp, const char *filename)
 {
 	FILE *fp = NULL;
 	png_structp png_ptr = NULL;
@@ -225,7 +225,7 @@ int write_atlas(const struct bitmap *bp, const char *file_name)
 
 	const int pixel_size = sizeof(uint8_t);
 
-	fp = fopen(file_name, "wb");
+	fp = fopen(filename, "wb");
 	if (!fp)
 		return 1;
 
