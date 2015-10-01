@@ -27,8 +27,10 @@ struct raster_glyph {
 };
 
 static const char *txt_hdr_fmt =
+"glyph_count=%d\n"
+"render_size=%d\n"
 "space_advance=%f\n"
-"glyph_count=%d\n";
+"height=%f\n";
 
 static const char *txt_glyph_fmt =
 "\n# Glyph %d (%s)\n"
@@ -173,8 +175,27 @@ void write_text_glyph(FILE *fp, int i, const struct raster_glyph *glyph)
 		metrics->st1[0], metrics->st1[1]);
 }
 
-int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
-		  float space_advance, const char *path, int format)
+float space_advance(FT_Face face, int size)
+{
+	float advance;
+	FT_UInt glyph_index;
+	FT_GlyphSlot slot;
+
+	glyph_index = FT_Get_Char_Index(face, ' ');
+	if (FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT)) {
+		warning("unaible to retrieve horizontal space advance");
+		advance = 0.0f;
+	} else {
+		slot = face->glyph;
+		advance = (float)slot->metrics.horiAdvance / (63.0f * (float)size);
+	}
+
+	return advance;
+}
+
+
+int write_metrics(FT_Face face, const struct raster_glyph *glyph_list,
+		  int num_glyphs, int pixel_height, const char *path, int format)
 {
 	const struct raster_glyph *glyph;
 	struct metrics_hdr def;
@@ -186,9 +207,13 @@ int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
 		return 1;
 	}
 
+	int size = pixel_height;
+	float advance = space_advance(face, pixel_height);
+	float height = (float)face->height / (64.0f * (float)size);
+
 	switch (format) {
 	case MF_TEXT:
-		fprintf(fp, txt_hdr_fmt, space_advance, num_glyphs);
+		fprintf(fp, txt_hdr_fmt, num_glyphs, size, advance, height);
 		int i = 0;
 		glyph = glyph_list;
 		while (glyph) {
@@ -199,7 +224,7 @@ int write_metrics(const struct raster_glyph *glyph_list, int num_glyphs,
 		break;
 	case MF_BINARY:
 		def.glyph_count = num_glyphs;
-		def.space_advance = space_advance;
+		def.space_advance = advance;
 		def.lut_offset = sizeof(struct metrics_hdr);
 		def.glyph_offset = def.lut_offset + sizeof(uint32_t) * num_glyphs;
 		fwrite(&def, sizeof(struct metrics_hdr), 1, fp);
@@ -280,23 +305,6 @@ png_failure:
 	return 1;
 }
 
-float space_advance(FT_Face face, int size)
-{
-	float advance;
-	FT_UInt glyph_index;
-	FT_GlyphSlot slot;
-
-	glyph_index = FT_Get_Char_Index(face, ' ');
-	if (FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT)) {
-		warning("unaible to retrieve horizontal space advance");
-		advance = 0.0f;
-	} else {
-		slot = face->glyph;
-		advance = (float)slot->metrics.horiAdvance / (63.0f * (float)size);
-	}
-
-	return advance;
-}
 
 int rasterize_runes(FT_Face face, struct raster_glyph **head, int *num_glyphs,
 		    const range_t *range, const struct fr *fr)
@@ -490,8 +498,7 @@ void rasterize_font(FT_Face face, const struct fr *fr)
 	 * coordinates, we can proceed and write the files.
 	 */
 	write_atlas(atlas, fr->atlas_filename);
-	write_metrics(glyphs, num_glyphs, space_advance(face, fr->pixel_height),
-		      fr->metrics_filename, fr->format);
+	write_metrics(face, glyphs, num_glyphs, fr->pixel_height, fr->metrics_filename, fr->format);
 
 	/* Free atlas and glyph list */
 	destroy_bitmap(atlas);
