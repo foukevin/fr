@@ -3,9 +3,6 @@ Fr - A command line font rasterizing tool
 
 Copyright (c) 2015 Kévin Delbrayelle
 
-Fr is an Open Source project covered by the GNU General Public
-License version 2.
-
 About Fr
 -----------------------------------------------------------------------
 
